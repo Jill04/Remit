@@ -35,7 +35,14 @@ const {
          await remit.transfer(accounts[3],web3.utils.toWei("50","ether"));
          await remit.approve(remitstake.address,web3.utils.toWei("40","ether"),{from:accounts[3]});
          await remit.setStakeAddress(remitstake.address);
-         await remitstake.deposit(web3.utils.toWei("35","ether"),{from : accounts[3]});
+         await remitstake.deposit(web3.utils.toWei("15","ether"),{from : accounts[3]});
+         
+         await time.increase(time.duration.hours(93));
+
+         await remitstake.deposit(web3.utils.toWei("25","ether"),{from : accounts[3]});
+         var actual = await remit.stakeFarmSupply();
+         var expected = web3.utils.toWei("350000","ether");
+         assert.notEqual(actual,expected);
       });
     });
 
@@ -144,8 +151,16 @@ const {
           await remit.transfer(accounts[1],web3.utils.toWei("56","ether"));
           await remit.approve(remitstake.address,web3.utils.toWei("50","ether"),{from:accounts[1]});
           await remitstake.deposit(web3.utils.toWei("20","ether"),{from : accounts[1]});
+
+          await time.increase(time.duration.hours(93));
+
           await remitstake.deposit(web3.utils.toWei("15","ether"),{from : accounts[1]});
           await remitstake.claimDivs();
+          var actual = await remit.stakeFarmSupply();
+          var expected = web3.utils.toWei("350000","ether");
+          assert.notEqual(actual,expected);
+          actual = await remitstake.totalEarnedTokens(accounts[1]);
+          assert.notEqual(actual,0);
         });
       });
 });

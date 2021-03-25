@@ -1,172 +1,326 @@
 const {
-    BN, // Big Number support
-    constants, // Common constants, like the zero address and largest integers
-    expectEvent, // Assertions for emitted events
-    expectRevert, // Assertions for transactions that should fail
-    time,
-  } = require("@openzeppelin/test-helpers");
-  
-  const truffleAssert = require("truffle-assertions");
-  const { assert, expect } = require("chai");
-  const { increase } = require("@openzeppelin/test-helpers/src/time");
-  const Remit = artifacts.require("Remit");
-  const RemitFarm = artifacts.require("RemitVaultFarmEth");
-  const Mistic =  artifacts.require("Mistic");
-  
-  require("chai").use(require("chai-bignumber")(BN)).should();
-  
-  
-  contract("Remit Farm", () => {
-    it("Should deploy smart contract properly", async () => {
-      const remit = await Remit.deployed();
-      const remitfarm = await RemitFarm.deployed();
-      const tokenOther = await Mistic.deployed();
+  BN, // Big Number support
+  constants, // Common constants, like the zero address and largest integers
+  expectEvent, // Assertions for emitted events
+  expectRevert, // Assertions for transactions that should fail
+  time,
+} = require("@openzeppelin/test-helpers");
 
-      assert(remit.address !== "");
-      assert(remitfarm.address !== "");
-      assert(tokenOther.address !== "");
-    });
-  
-    beforeEach(async function () {
-      remit = await Remit.new();
-      remitfarm = await RemitFarm.new()
-      tokenOther = await Mistic.new();
-      accounts = await web3.eth.getAccounts();
-    });
-  
- 
-  
-    describe("[Testcase 1: To deposit  tokens ]", () => {
-      it("Deposit ", async () => {
-        await remit.mintCirculationSupply(accounts[0],web3.utils.toWei("300","ether"));
-        await remit.setFarmAddress(remitfarm.address);
-        await remitfarm.setRewardTokenAddress(remit.address);
-        await remitfarm.setDepositTokenAddress(tokenOther.address);
-        await tokenOther.transfer(accounts[2],web3.utils.toWei("100","ether"));
-        await tokenOther.approve(remitfarm.address,web3.utils.toWei("55","ether"),{from:accounts[2]});
-        await remitfarm.deposit(web3.utils.toWei("20","ether"),{from : accounts[2]});
-        await remitfarm.deposit(web3.utils.toWei("10","ether"),{from : accounts[2]});
-        var actual = await remitfarm.depositedTokens( accounts[2]);
-        var expected = web3.utils.toWei("30","ether");
-        assert.equal(actual,expected);
+const { assert, expect } = require("chai");
+const Remit = artifacts.require("Remit");
+const RemitPreSale = artifacts.require("RemitPresale");
 
-        await time.increase(time.duration.days(45));
 
-        await remitfarm.deposit(web3.utils.toWei("15","ether"),{from : accounts[2]});
-        
-        actual = await remit.stakeFarmSupply();
-        expected = web3.utils.toWei("350000","ether");
-        assert.notEqual(actual,expected);
-  
-      });
-    });
+contract("Remit PresSale", () => {
+  it("Should deploy smart contract properly", async () => {
+    accounts = await web3.eth.getAccounts();
+    const remit = await Remit.deployed();
+    const remitpresale = await RemitPreSale.deployed(remit.address,accounts[9]);
 
-    describe("[Testcase 2: To deposit non trusted tokens ]", () => {
-        it("Deposit ", async () => {
-          await remit.mintCirculationSupply(accounts[0],web3.utils.toWei("200","ether"));
-          await remit.setFarmAddress(remitfarm.address);
-          await remitfarm.setRewardTokenAddress(remit.address);
-          await tokenOther.transfer(accounts[6],web3.utils.toWei("100","ether"));
-          await tokenOther.approve(remitfarm.address,web3.utils.toWei("100","ether"),{from:accounts[6]});
-          try{
-            await remitfarm.deposit(web3.utils.toWei("80","ether"),{from : accounts[6]});
-          }
-          catch{
-            var actual = await remitfarm.depositedTokens( accounts[6]);
-            var expected = 0;
-            assert.equal(actual,expected);
-          }
-        });
-
-    describe("[Testcase 3: To withdraw tokens ]", () => {
-        it("withdraw", async () => {
-            await remit.mintCirculationSupply(accounts[0],web3.utils.toWei("300","ether"));
-            await remit.setFarmAddress(remitfarm.address);
-            await remitfarm.setRewardTokenAddress(remit.address);
-            await remitfarm.setDepositTokenAddress(tokenOther.address);
-            await tokenOther.transfer(accounts[2],web3.utils.toWei("100","ether"));
-            await tokenOther.approve(remitfarm.address,web3.utils.toWei("80","ether"),{from:accounts[2]});
-            await remitfarm.deposit(web3.utils.toWei("39","ether"),{from : accounts[2]});
-            await remitfarm.deposit(web3.utils.toWei("20","ether"),{from : accounts[2]});
-
-            await time.increase(time.duration.days(56));
-            
-            await remitfarm.withdraw(web3.utils.toWei("18","ether"),{from : accounts[2]});
-
-            var actual = await remitfarm.totalTokens();
-            var expected = web3.utils.toWei("41","ether");
-            assert.equal(actual,expected);
-            });
-          });
-      });
-
-      
-      describe("[Testcase 4: To withdraw tokens before cliff time ]", () => {
-        it("withdraw", async () => {
-          await remit.mintCirculationSupply(accounts[0],web3.utils.toWei("300","ether"));
-          await remit.setFarmAddress(remitfarm.address);
-          await remitfarm.setRewardTokenAddress(remit.address);
-          await remitfarm.setDepositTokenAddress(tokenOther.address);
-          await tokenOther.transfer(accounts[4],web3.utils.toWei("100","ether"));
-          await tokenOther.approve(remitfarm.address,web3.utils.toWei("100","ether"),{from:accounts[4]});
-          await remitfarm.deposit(web3.utils.toWei("89","ether"),{from : accounts[4]});
-          try{
-            await remitfarm.withdraw(web3.utils.toWei("65","ether"),{from : accounts[4]});
-          }
-          catch{
-          }
-          var actual = await remitfarm.totalEarnedTokens(accounts[4]);
-          var expected = 0;
-          assert.equal(actual,expected);
-        });
+    assert(remit.address !== "");
+    assert(remitpresale.address !== "");
   });
 
-    describe("[Testcase 5: To perform emergency withdraw ]", () => {
-      it("Emergency Withdraw", async () => {
-        await remit.mintCirculationSupply(accounts[0],web3.utils.toWei("150","ether"));
-        await remit.setFarmAddress(remitfarm.address);
-        await remitfarm.setRewardTokenAddress(remit.address);
-        await remitfarm.setDepositTokenAddress(tokenOther.address);
-        await tokenOther.transfer(accounts[2],web3.utils.toWei("60","ether"));
-        await tokenOther.approve(remitfarm.address,web3.utils.toWei("55","ether"),{from:accounts[2]});
-        await remitfarm.deposit(web3.utils.toWei("40","ether"),{from : accounts[2]});
+  beforeEach(async function () {
+    accounts = await web3.eth.getAccounts();
+    remit = await Remit.new();
+    remitpresale = await RemitPreSale.new(remit.address,accounts[9]);
+    
+  });
 
-        await time.increase(time.duration.hours(84));
+  describe("[Testcase 1: To start the presale of remit tokens]", () => {
+    it("Start  PreSale", async () => {
+       await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+       await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+       await remitpresale.setMaxDeposit(web3.utils.toWei("10","ether"));
+       await remitpresale.setPrice(web3.utils.toWei("0.02","ether"));
+       await remitpresale.setCap(web3.utils.toWei("100","ether"));
+
+       var endtime = 1619349181;
+
+       await remitpresale.startPresale(endtime);
+
+       var actual = await remitpresale.startTime();
+       var expected = 0;
+       assert.notEqual(actual,expected);
+    });
+  });
+
+  describe("[Testcase 2: To start the presale of remit tokens without setting the required parameters]", () => {
+      it("Start  PreSale", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.02","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1619349181;
+         try{
+          await remitpresale.startPresale(endtime);
+         }
+         catch{
+         }
+         var actual = await remitpresale.startTime();
+         var expected = 0;
+         assert.equal(actual,expected);
+      });
+    });
+
+    describe("[Testcase 3:To buy tokens before pre sale starts]", () => {
+      it("Buy  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("10","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.02","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         try{
+          await remitpresale.buyToken({from : accounts[7], value : web3.utils.toWei("2.46","ether")})
+         }catch{
+
+         }
+         var actual = await remitpresale.claimableAmount(accounts[7]);
+         var expected = 0
+         assert.equal(actual,expected);
        
-        await remitfarm.emergencyWithdraw(web3.utils.toWei("28","ether"),{from : accounts[2]});
-        var actual = await remitfarm.totalEarnedTokens(accounts[2]);
-        var expected = 0;
-        assert.equal(actual,expected);
       });
     });
 
-
-    describe("[Testcase 6: To deposit and withdraw ]", () => {
-      it("Deposit and Withdraw Tokens", async () => {
-        await remit.mintCirculationSupply(accounts[0],web3.utils.toWei("400","ether"));
-        await remit.setFarmAddress(remitfarm.address);
-        await remitfarm.setRewardTokenAddress(remit.address);
-        await remitfarm.setDepositTokenAddress(tokenOther.address);
-
-        await tokenOther.transfer(accounts[5],web3.utils.toWei("60","ether"));
-        await tokenOther.approve(remitfarm.address,web3.utils.toWei("55","ether"),{from:accounts[5]});
-        await remitfarm.deposit(web3.utils.toWei("40","ether"),{from : accounts[5]});
-
-        await tokenOther.transfer(accounts[6],web3.utils.toWei("45","ether"));
-        await tokenOther.approve(remitfarm.address,web3.utils.toWei("30","ether"),{from:accounts[6]});
-        await remitfarm.deposit(web3.utils.toWei("25","ether"),{from : accounts[6]});
-
-        await remitfarm.deposit(web3.utils.toWei("10","ether"),{from : accounts[5]});
-
-        await time.increase(time.duration.days(56));
-            
-        await remitfarm.withdraw(web3.utils.toWei("18","ether"),{from : accounts[5]});
-
-        var actual = await remit.stakeFarmSupply();
-        var expected = web3.utils.toWei("350000","ether");
-        assert.notEqual(actual,expected);
-  
+    describe("[Testcase 4:To buy tokens after pre sale starts]", () => {
+      it("Buy  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("10","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.02","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1619349181;
+         await remitpresale.startPresale(endtime);
+         await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("1.67","ether")})
+        
+         var actual = await remitpresale.claimableAmount(accounts[3]);
+         var expected = 0
+         assert.notEqual(actual,expected);
       });
-  });
+    });
+
+  describe("[Testcase 5:To buy tokens by depositing less /more than minium/maximum amount]", () => {
+      it("Buy  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.8","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("6","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.02","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1619349181;
+         await remitpresale.startPresale(endtime);
+         try{
+          await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("0.54","ether")})
+         }
+         catch{
+         }
+         var actual = await remitpresale.claimableAmount(accounts[3]);
+         var expected = 0
+         assert.equal(actual,expected);
+
+         await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("2.92","ether")})
+
+         try{
+          await remitpresale.buyToken({from : accounts[2], value : web3.utils.toWei("7.8","ether")})
+         }
+         catch{
+         }
+         var actual = await remitpresale.claimableAmount(accounts[2]);
+         var expected = 0
+         assert.equal(actual,expected);
+      });
+    });
+
+    describe("[Testcase 6:To buy tokens when sale is paused]", () => {
+      it("Buy  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.8","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("6","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.01","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1619349181;
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("3","ether")})
+         await remitpresale.buyToken({from : accounts[8], value : web3.utils.toWei("2.12","ether")})
+         await remitpresale.buyToken({from : accounts[2], value : web3.utils.toWei("1.23","ether")})
+
+         await remitpresale.isPausable(true);
+
+         try{
+          await remitpresale.buyToken({from : accounts[4], value : web3.utils.toWei("2","ether")})
+         }
+         catch{
+         }
+         var actual = await remitpresale.claimableAmount(accounts[4]);
+         var expected = 0
+         assert.equal(actual,expected);
+      });
+    });
+
+    describe("[Testcase 7:To buy tokens when it hits the cap amount]", () => {
+      it("Buy  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("4","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.01","ether"));
+         await remitpresale.setCap(web3.utils.toWei("12","ether"));
+         var endtime = 1619349181;
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("3","ether")})
+         await remitpresale.buyToken({from : accounts[8], value : web3.utils.toWei("2.12","ether")})
+         await remitpresale.buyToken({from : accounts[2], value : web3.utils.toWei("3.43","ether")})
+         await remitpresale.buyToken({from : accounts[4], value : web3.utils.toWei("3.45","ether")})
+         try{
+          await remitpresale.buyToken({from : accounts[5], value : web3.utils.toWei("1.89","ether")})
+         }
+         catch{
+         }
+         var acutal = await remitpresale.totalInvestment();
+         var expected = web3.utils.toWei("12","ether");
+         assert(acutal,expected);
+      });
+    });
+
+    describe("[Testcase 8:To claim tokens]", () => {
+      it("Claim  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("4.5","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.02","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1619349181;
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[6], value : web3.utils.toWei("2.76","ether")})
+         await remitpresale.buyToken({from : accounts[1], value : web3.utils.toWei("1.41","ether")})
+         await remitpresale.buyToken({from : accounts[5], value : web3.utils.toWei("3.19","ether")})
+
+         var actual = await remit.balanceOf(accounts[1]);
+         var expected = 0
+         assert.equal(actual,expected);
+      
+         await time.increase(time.duration.days(45));
+
+         await remitpresale.claim({from:accounts[1]}); 
+         await remitpresale.claim({from:accounts[6]});
+
+         actual = await remit.balanceOf(accounts[1]);
+         expected = web3.utils.toWei("70.5","ether")
+         assert.equal(actual,expected);
+
+         actual = await remit.balanceOf(accounts[6]);
+         expected = web3.utils.toWei("138","ether");
+         assert.equal(actual,expected);
+      });
+    });
+
+    describe("[Testcase 9:To claim tokens before presale ends]", () => {
+      it("Claim  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("4.5","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.01","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1624619581;
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[6], value : web3.utils.toWei("1.98","ether")})
+         
+         var actual = await remit.balanceOf(accounts[1]);
+         var expected = 0
+         assert.equal(actual,expected);
+         try{
+          await remitpresale.claim({from:accounts[6]});
+         }
+         catch{
+         }
+
+         actual = await remit.balanceOf(accounts[6]);
+         expected = 0
+         assert.equal(actual,expected);
+      });
+    });
+
+    describe("[Testcase 10:To claim tokens who has not deposited]", () => {
+      it("Claim  Tokens", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("4.5","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.01","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1624619581;
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[5], value : web3.utils.toWei("3.25","ether")})
+         
+         try{
+          await remitpresale.claim({from:accounts[8]});
+         }
+         catch{
+         }
+
+         var actual = await remit.balanceOf(accounts[5]);
+         var expected = 0
+         assert.equal(actual,expected);
+      });
+    });
+
+    describe("[Testcase 11:To withdraw eth deposited in the presale]", () => {
+      it("Withdraw eth deposited", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("6","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.01","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1627211581; 
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[5], value : web3.utils.toWei("3.25","ether")})
+         await remitpresale.buyToken({from : accounts[1], value : web3.utils.toWei("4.41","ether")})
+         await remitpresale.buyToken({from : accounts[5], value : web3.utils.toWei("5.19","ether")})
+         await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("1.87","ether")})
+         await remitpresale.buyToken({from : accounts[8], value : web3.utils.toWei("6","ether")})
+
+         var actual = await remitpresale.totalInvestment();
+         var expected = web3.utils.toWei("20.72","ether");
+         assert(actual,expected);
+
+         
+         actual = await web3.eth.getBalance(accounts[9]);
+         assert.equal(actual,web3.utils.toWei("100","ether"))
+         
+         await remitpresale.withdrawDepositedEth();
+
+         var actual = await web3.eth.getBalance(accounts[9]);
+         assert.notEqual(actual,web3.utils.toWei("100","ether"))
+      });
+    });
+
+    describe("[Testcase 12:To set new wallet address]", () => {
+      it("Withdraw eth deposited", async () => {
+         await remit.mintCirculationSupply(remitpresale.address,web3.utils.toWei("5000","ether"));
+         await remitpresale.setMinDeposit(web3.utils.toWei("0.1","ether"));
+         await remitpresale.setMaxDeposit(web3.utils.toWei("6","ether"));
+         await remitpresale.setPrice(web3.utils.toWei("0.01","ether"));
+         await remitpresale.setCap(web3.utils.toWei("100","ether"));
+         var endtime = 1632568381;
+         await remitpresale.startPresale(endtime);
+       
+         await remitpresale.buyToken({from : accounts[2], value : web3.utils.toWei("1","ether")})
+         await remitpresale.buyToken({from : accounts[1], value : web3.utils.toWei("3.98","ether")})
+         await remitpresale.buyToken({from : accounts[3], value : web3.utils.toWei("4","ether")})
+         await remitpresale.buyToken({from : accounts[8], value : web3.utils.toWei("6","ether")})
+
+         await remitpresale.setWalletAddress(accounts[5]); 
+         
+         var prevbalance = await web3.eth.getBalance(accounts[5]);
+        
+         await remitpresale.withdrawDepositedEth(); 
+
+         var currentbalance = await web3.eth.getBalance(accounts[5]);
+         assert.notEqual(currentbalance,prevbalance);
+      });
+    });
 });
-  
